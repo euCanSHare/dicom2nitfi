@@ -1,0 +1,18 @@
+#!/bin/bash
+
+REALPATH="$(realpath "$0")"
+BASEDIR="$(dirname "$REALPATH")"
+case "$BASEDIR" in
+	/*)
+		true
+		;;
+	*)
+		BASEDIR="${PWD}/$BASEDIR"
+		;;
+esac
+
+PROGNAME="$(basename "$0")"
+
+source "${BASEDIR}"/env/bin/activate
+exec python -u "${BASEDIR}"/"${PROGNAME}".py "$@"
+exit 1

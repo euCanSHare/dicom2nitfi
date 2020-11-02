@@ -1,0 +1,7 @@
+SimpleITK
+numpy
+pandas
+nibabel
+regex
+python-opencv
+pydicom
