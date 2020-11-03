@@ -16,7 +16,7 @@ WORKING_DIR=$TEST_DATA_DIR/run000
 TOOL_EXECUTABLE=$TEST_DATA_DIR/../main
 
 
-# Running segmentation tool
+# Running conversion tool
 
 if [ -d  $WORKING_DIR ]; then rm -r $WORKING_DIR/; mkdir -p $WORKING_DIR; else mkdir -p $WORKING_DIR; fi
 cd $WORKING_DIR

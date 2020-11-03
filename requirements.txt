@@ -1,7 +1,7 @@
-SimpleITK
 numpy
 pandas
-nibabel
+SimpleITK
 regex
-python-opencv
 pydicom
+nibabel
+python-opencv
