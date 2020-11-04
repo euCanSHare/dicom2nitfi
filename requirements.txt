@@ -4,4 +4,4 @@ SimpleITK
 regex
 pydicom
 nibabel
-python-opencv
+opencv-python
