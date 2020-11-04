@@ -39,7 +39,7 @@
     ],
     "arguments": [
         {
-            "value": "/home/vec/Desktop/euCanSHare/VRE/dicom2nitfi/tests/run000",
+            "value": "/home/user/dicom2nitfi/tests/run000",
             "name": "execution"
         },
         {
