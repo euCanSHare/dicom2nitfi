@@ -34,7 +34,7 @@
           --> patientB
           --> etc.
 """
-import os, regex, sys, glob, pydicom
+import os, regex, sys, glob, pydicom, zipfile
 import pickle, json, shutil, argparse
 import numpy as np
 import pandas as pd
@@ -52,7 +52,16 @@ class DICOM_Dataset(object):
             Initialise data
             Group series by study type or field of view.
         """
+        # If input folder is a zip file, unzip it
+        path_extracted, ext = os.path.splitext(input_dir)
+        if ext == '.zip':
+            zip_ref = zipfile.ZipFile(input_dir, 'r')
+            zip_ref.extractall(os.path.dirname(input_dir))
+            zip_ref.close()
+            input_dir = path_extracted
+
         # Find patients and look for subdirs for each of them
+        self.patient_dict = {}
         patients = os.listdir(input_dir)
         for p in sorted(patients):
             if '_transformed' in p:
@@ -61,6 +70,7 @@ class DICOM_Dataset(object):
             if not os.path.isdir(folder):
                 continue
             print('Patient found', p)
+            self.patient_dict[p] = []
 
             new_dir = os.path.join(input_dir, p + '_transformed')
             if os.path.exists(new_dir):
@@ -159,7 +169,7 @@ class DICOM_Dataset(object):
                 os.makedirs(os.path.dirname(row['dst']), exist_ok=True)
                 shutil.copy(row['src'], row['dst'])
 
-            self.transformDicoms(new_dir)
+            self.transformDicoms(new_dir, p)
 
             # File postprocessing
             if post_process:
@@ -168,11 +178,15 @@ class DICOM_Dataset(object):
                 except Exception:
                     continue
             
-            for f in glob.iglob(os.path.join(new_dir, '**', '*.dcm'), recursive=True):
-                os.remove(f)
+            # Delete origin folder
+            os.system('rm -rf {}'.format(os.path.join(input_dir, p)))
+
+        # Remove DICOM files from converted folders
+        for f in glob.iglob(os.path.join(input_dir, '*_transformed', '**', '*.dcm'), recursive=True):
+            os.remove(f)
 
 
-    def transformDicoms(self, dicom_dir):
+    def transformDicoms(self, dicom_dir, patient):
         avail_cont = []
         self.cvi42_lb_used = False
         if self.cvi42_lb:
@@ -272,9 +286,7 @@ class DICOM_Dataset(object):
                     volume[..., idx%Z, idx//Z] = im
                 if ds.SOPInstanceUID in avail_cont:
                     self.cvi42_lb_used = True # Contouring found
-                    print('Get contour')
                     lab_down, lab_up = getContour(os.path.join(contour_dir, '{}.pickle'.format(ds.SOPInstanceUID)), X, Y)
-                    print('Get contour after')
                     label[..., idx%Z, idx//Z] = lab_down
                     label_up[..., idx%Z, idx//Z] = lab_up
 
@@ -347,6 +359,8 @@ class DICOM_Dataset(object):
             nii.header['pixdim'][4] = dt
             nii.header['sform_code'] = 1
             nib.save(nii, os.path.join(folder, '{}.nii.gz'.format(serDesc)))
+            aux_file = {}
+            aux_file['file_path'] = os.path.join(folder, '{}.nii.gz'.format(serDesc))
             if self.cvi42_lb:
                 nii_lb = nib.Nifti1Image(label, affine)
                 nii_lb.header['pixdim'][4] = dt
@@ -356,6 +370,8 @@ class DICOM_Dataset(object):
                 nii_lb_up.header['pixdim'][4] = dt
                 nii_lb_up.header['sform_code'] = 1
                 nib.save(nii_lb_up, os.path.join(folder, '{}_label_upsample.nii.gz'.format(serDesc)))
+                aux_file['mask_path'] = os.path.join(folder, '{}_label.nii.gz'.format(serDesc))
+                aux_file['upsample_mask_path'] = os.path.join(folder, '{}_label_upsample.nii.gz'.format(serDesc))
 
         # Save information of patient
         studyDate = ds.StudyDate if ds.__contains__('StudyDate') else ''
@@ -367,18 +383,55 @@ class DICOM_Dataset(object):
             # Compute age at the time of scan
             age = int(studyDate[:4]) - int(patientBD)
 
+        # Image view and use of contrast
+        patt = ['cine_short_axis', 'cine_short_axis_6MM', 'CINE_EC.*_apex', 'EC_.*_FIL', 'EC_.*_10slices',
+                'CINE_EC_barrido', 'CINE_EC', 'cine_.*_EC', 'SHORT_AXIS', 'CINE_EJE_CORTO', 
+                'FUNCION_VI', '.*\_\#SA', '.*SAX.*', 'viabilidad']
+        sa = np.any([regex.search(p, serDesc) for p in patt])
+        patt = ['viabilidad', '.*RTG']
+        ge = np.any([regex.search(p, serDesc) for p in patt])
+        patt = ['.*2C.*', '.*2_C.*']
+        c2 = np.any([regex.search(p, serDesc) for p in patt])
+        patt = ['.*3C.*', '.*3_C.*']
+        c3 = np.any([regex.search(p, serDesc) for p in patt])
+        patt = ['.*4C.*', '.*4_C.*']
+        c4 = np.any([regex.search(p, serDesc) for p in patt])
+        view = ''
+        contrast = False
+        if c2:
+            view = '2chambers'
+        elif c3:
+            view = '3chambers'
+        elif c4:
+            view = '4chambers'
+        elif sa:
+            view = 'short_axis'
+
+        if ge:
+            contrast = True
+
         info = {
             'age': age,
+            'patientID': ds.PatientID if ds.__contains__('PatientID') else '',
             'sex': ds.PatientSex if ds.__contains__('PatientSex') else '',
             'weight': ds.PatientWeight if ds.__contains__('PatientWeight') else '',
             'size': ds.PatientSize if ds.__contains__('PatientSize') else '',
             'vendor': ds.Manufacturer if ds.__contains__('Manufacturer') else '',
             'institution': ds.InstitutionName if ds.__contains__('InstitutionName') else '',
+            'modality': ds.Modality if ds.__contains__('Modality') else '',
+            'bodyPartExamined': ds.BodyPartExamined if ds.__contains__('BodyPartExamined') else '',
+            'view': view, 'contrast': contrast,
             'studyDate': studyDate
         }
-        with open(os.path.join(folder, '..', 'info.json'), 'w') as f:
-            json.dump(info, f)
+        # with open(os.path.join(folder, '..', 'info.json'), 'w') as f:
+        #     json.dump(info, f)
+        
+        aux_file.update(info)
+        self.patient_dict[patient].append(aux_file)
 
+
+    def getNiftis(self):
+        return self.patient_dict
 
 
 if __name__ == "__main__":

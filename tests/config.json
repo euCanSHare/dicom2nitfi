@@ -4,42 +4,28 @@
             "file": {
                 "file_type": "NIFTI",
                 "sources": [
+                    "/home/user/image_segmentation/data/mic/training/patient002/patient002_frame01.nii.gz"
+                ],
+                "file_path": "/home/user/image_segmentation/data/mic/training/patient002/patient002_frame01_mask.nii.gz",
+                "meta_data": {},
+                "data_type": "bioimage"
+            },
+            "required": true,
+            "allow_multiple": true,
+            "name": "images"
+        },
+        {
+            "file": {
+                "file_type": "NIFTI",
+                "sources": [
                     "/home/user/image_segmentation/data/mic/training/patient001/patient001_frame01.nii.gz"
                 ],
                 "file_path": "/home/user/image_segmentation/data/mic/training/patient001/patient001_frame01_mask.nii.gz",
                 "meta_data": {},
                 "data_type": "image_mask"
             },
-            "required": true,
-            "allow_multiple": false,
-            "name": "masks"
-        },
-        {
-            "file": {
-                "file_type": "NIFTI",
-                "sources": [
-                    "/home/user/image_segmentation/data/mic/training/patient002/patient002_frame01.nii.gz"
-                ],
-                "file_path": "/home/user/image_segmentation/data/mic/training/patient002/patient002_frame01_mask.nii.gz",
-                "meta_data": {},
-                "data_type": "image_mask"
-            },
-            "required": true,
-            "allow_multiple": false,
-            "name": "masks"
-        },
-        {
-            "file": {
-                "file_type": "NIFTI",
-                "sources": [
-                    "/home/user/image_segmentation/data/mic/training/patient003/patient003_frame01.nii.gz"
-                ],
-                "file_path": "/home/user/image_segmentation/data/mic/training/patient003/patient003_frame01_mask.nii.gz",
-                "meta_data": {},
-                "data_type": "image_mask"
-            },
-            "required": true,
-            "allow_multiple": false,
+            "required": false,
+            "allow_multiple": true,
             "name": "masks"
         }
     ],
@@ -48,30 +34,12 @@
             "value": "unique_file_id_5e14abe0a37012.29503905",
             "required": true,
             "allow_multiple": true,
-            "name": "images"
-        },
-        {
-            "value": "unique_file_id_5e14abe0a37012.29503906",
-            "required": true,
-            "allow_multiple": true,
-            "name": "images"
-        },
-        {
-            "value": "unique_file_id_5e14abe0a37012.29503907",
-            "required": true,
-            "allow_multiple": true,
-            "name": "images"
-        },
-        {
-            "value": "unique_file_id_5e14abe0a37012.29503908",
-            "required": true,
-            "allow_multiple": false,
-            "name": "model"
+            "name": "bioimage"
         }
     ],
     "arguments": [
         {
-            "value": "/home/user/image_segmentation/tests/run000",
+            "value": "/home/vec/Desktop/euCanSHare/VRE/dicom2nitfi/tests/run000",
             "name": "execution"
         },
         {

@@ -1,34 +1,76 @@
 {
     "output_files": [
         {
-            "sources": [
-                "/home/user/image_segmentation/data/mic/training/patient002/patient002_frame01.nii.gz"
-            ],
-            "meta_data": {},
-            "data_type": "image_mask",
-            "name": "masks",
+            "name": "bioimage",
+            "file_path": "/home/user/dicom2nitfi/data/sample_data/test_ct.nii.gz",
+            "data_type": "bioimage",
             "file_type": "NIFTI",
-            "file_path": "/home/user/image_segmentation/data/mic/training/patient002/patient002_frame01_mask.nii.gz"
+            "meta_data": {
+                "file_path": "/home/user/dicom2nitfi/data/sample_data/test_ct.nii.gz",
+                "age": "",
+                "patientID": "scan1",
+                "sex": "",
+                "weight": "",
+                "size": "",
+                "vendor": "",
+                "institution": "",
+                "modality": "CT",
+                "bodyPartExamined": "CHEST",
+                "view": "",
+                "contrast": false,
+                "studyDate": "20200202"
+            },
+            "sources": []
         },
         {
-            "sources": [
-                "/home/user/image_segmentation/data/mic/training/patient003/patient003_frame01.nii.gz"
-            ],
-            "meta_data": {},
-            "data_type": "image_mask",
-            "name": "masks",
+            "name": "bioimage",
+            "file_path": "/home/user/dicom2nifti/data/sample_patient/short_axis.nii.gz",
+            "data_type": "bioimage",
             "file_type": "NIFTI",
-            "file_path": "/home/user/image_segmentation/data/mic/training/patient003/patient003_frame01_mask.nii.gz"
+            "meta_data": {
+                "file_path": "/home/user/dicom2nifti/data/sample_patient/short_axis.nii.gz",
+                "mask_path": "/home/user/dicom2nifti/data/sample_patient/short_axis_label.nii.gz",
+                "upsample_mask_path": "/home/user/dicom2nifti/data/sample_patient/short_axis_label_upsample.nii.gz",
+                "age": 45,
+                "patientID": "scan2",
+                "sex": "F",
+                "weight": 70.0,
+                "size": "",
+                "vendor": "Philips Medical Systems",
+                "institution": "Hospital St. Johns",
+                "modality": "MR",
+                "bodyPartExamined": "HEART",
+                "view": "short_axis",
+                "contrast": false,
+                "studyDate": "20200202"
+            },
+            "sources": []
         },
         {
-            "sources": [
-                "/home/user/image_segmentation/data/mic/training/patient001/patient001_frame01.nii.gz"
-            ],
-            "meta_data": {},
+            "name": "image_mask",
+            "file_path": "/home/user/dicom2nifti/data/sample_patient/short_axis_label.nii.gz",
             "data_type": "image_mask",
-            "name": "masks",
             "file_type": "NIFTI",
-            "file_path": "/home/user/image_segmentation/data/mic/training/patient001/patient001_frame01_mask.nii.gz"
+            "meta_data": {
+                "file_path": "/home/user/dicom2nifti/data/sample_patient/short_axis_label.nii.gz",
+                "mask_path": "/home/user/dicom2nifti/data/sample_patient/short_axis_label.nii.gz",
+                "upsample_mask_path": "/home/user/dicom2nifti/data/sample_patient/short_axis_label_upsample.nii.gz",
+                "age": 45,
+                "patientID": "scan2",
+                "sex": "F",
+                "weight": 70.0,
+                "size": "",
+                "vendor": "Philips Medical Systems",
+                "institution": "Hospital St. Johns",
+                "modality": "MR",
+                "bodyPartExamined": "HEART",
+                "view": "short_axis",
+                "contrast": false,
+                "studyDate": "20200202"
+            },
+            "sources": [
+                "/home/user/dicom2nifti/data/sample_patient/short_axis.nii.gz"
+            ]
         }
     ]
 }

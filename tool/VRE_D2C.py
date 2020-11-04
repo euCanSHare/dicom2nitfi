@@ -22,7 +22,7 @@ from basic_modules.metadata import Metadata
 from utils import logger
 from basic_modules.tool import Tool
 
-from eval import run
+from convert import DICOM_Dataset
 
 
 class D2C_RUNNER(Tool):
@@ -81,49 +81,71 @@ class D2C_RUNNER(Tool):
             logger.debug("Execution path: {}".format(execution_path))
 
             # Set file names for output files (with random name if not predefined)
-            output_path = ''
-            for ofile in output_files:
-                if ofile["file_path"] is not None:
-                    pop_output_path = os.path.abspath(ofile["file_path"])
-                    if output_path == '':
-                        output_path = os.path.dirname(pop_output_path)
-                    self.populable_outputs.append(pop_output_path)
-                else:
-                    errstr = "The output_file[{}] can not be located. Please specify its expected path.".format(key)
-                    logger.error(errstr)
-                    raise Exception(errstr)
+            # output_path = ''
+            # for ofile in output_files:
+            #     if ofile["file_path"] is not None:
+            #         pop_output_path = os.path.abspath(ofile["file_path"])
+            #         if output_path == '':
+            #             output_path = os.path.dirname(pop_output_path)
+            #         self.populable_outputs.append(pop_output_path)
+            #     else:
+            #         errstr = "The output_file[{}] can not be located. Please specify its expected path.".format(key)
+            #         logger.error(errstr)
+            #         raise Exception(errstr)
 
-            logger.debug("Init execution of the Segmentation")
+            logger.debug("Init execution of the conversion tool")
             # Prepare file paths
+            subjects = {}
             for key in input_files.keys():
-                if key == 'model':
-                    model = input_files[key]
-                elif key == 'images':
-                    datasets = input_files[key]
-                else:
-                    logger.debug('Unrecognized key {}'.format(key))
+                if key != 'bioimage':
+                    logger.debug('Invalid key "{}". Should be bioimage.'.format(key))
                     continue
+                for _file in input_files[key]:
+                    # Convert DICOM images
+                    aux = DICOM_Dataset(_file)
+                    subjects.update(aux.getNiftis())
 
-            # Segment images
-            run(model, datasets, output_path)
-
+            output_files = []
             out_meta = []
-            for ofile in output_files:
-                if os.path.isfile(ofile["file_path"]):
-                    meta = Metadata()
-                    meta.file_path = ofile["file_path"]  # Set file_path for output files
-                    meta.data_type = 'image_mask'
-                    meta.file_type = 'NIFTI'
+            for subj in subjects.keys():
+                for _file in subjects[subj]:
+                    if os.path.isfile(_file["file_path"]):
+                        meta = Metadata()
+                        meta.file_path = _file["file_path"]  # Set file_path for output files
+                        meta.data_type = 'bioimage'
+                        meta.file_type = 'NIFTI'
+                        meta.meta_data = _file
+                        out_meta.append(meta)
+                        output_files.append({
+                            'name': 'bioimage', 'file_path': _file['file_path']
+                        })
 
-                    # Set sources for output files
-                    meta.sources = [ofile["file_path"].rstrip('_mask.nii.gz') + '.nii.gz']
+                        if 'mask_path' in _file:
+                            meta = Metadata()
+                            meta.file_path = _file["mask_path"]  # Set file_path for output files
+                            meta.data_type = 'image_mask'
+                            meta.file_type = 'NIFTI'
+                            # Set sources for output files
+                            meta.sources = [_file["file_path"]]
+                            meta.meta_data = _file
+                            out_meta.append(meta)
+                            output_files.append({
+                                'name': 'image_mask', 'file_path': _file['mask_path']
+                            })
 
-                    # Append new element in output metadata
-                    logger.info('Update metadata value {}'.format(meta.file_path))
-                    out_meta.append(meta)
-
-                else:
-                    logger.warning("Output not found. Path {} does not exist".format(ofile["file_path"]))
+                            meta = Metadata()
+                            meta.file_path = _file["upsample_mask_path"]  # Set file_path for output files
+                            meta.data_type = 'image_mask'
+                            meta.file_type = 'NIFTI'
+                            meta.meta_data = _file
+                            # Set sources for output files
+                            meta.sources = [_file["file_path"]]
+                            out_meta.append(meta)
+                            output_files.append({
+                                'name': 'image_mask', 'file_path': _file['upsample_mask_path']
+                            })
+                    else:
+                        logger.warning("Output not found. Path \"{}\" does not exist".format(_file["file_path"]))
 
             output_metadata = {'output_files': out_meta}
             logger.debug("Output metadata created")

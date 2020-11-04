@@ -48,6 +48,7 @@ class Metadata(object):  # pylint: disable=too-few-public-methods
         self.data_type = data_type
         self.file_type = file_type
         self.file_path = file_path
+        self.tool_version = 1.0
         if sources is None:
             sources = []
         self.sources = sources
