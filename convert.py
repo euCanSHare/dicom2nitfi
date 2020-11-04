@@ -13,18 +13,18 @@
 # limitations under the License.
 # ==============================================================================
 """
-    The Vall d'Hebron (VdH) cardiac image converting module.
+    DICOM converting module.
 
-    This module reads short-axis and long-axis DICOM files for a VdH subject,
+    This module reads DICOM files for a subject,
     looks for the correct series (sometimes there are more than one series for one slice),
-    stack the slices into a 3D-t volume and save as a nifti image.
+    stack the slices into a volume and save as a nifti image.
 
     pydicom is used for reading DICOM images. However, I have found that very rarely it could
     fail in reading certain DICOM images, perhaps due to the DICOM format, which has no standard
     and vary between manufacturers and machines.
 
     IMPORTANT!!
-    The structure of the project MUST BE
+    The structure of the project SHOULD BE
         dataset folder
           --> patientA
             --> cvi42wsx file
@@ -53,12 +53,12 @@ class DICOM_Dataset(object):
             Group series by study type or field of view.
         """
         # If input folder is a zip file, unzip it
-        path_extracted, ext = os.path.splitext(input_dir)
+        _, ext = os.path.splitext(input_dir)
         if ext == '.zip':
             zip_ref = zipfile.ZipFile(input_dir, 'r')
             zip_ref.extractall(os.path.dirname(input_dir))
             zip_ref.close()
-            input_dir = path_extracted
+            input_dir = os.path.dirname(input_dir)
 
         # Find patients and look for subdirs for each of them
         self.patient_dict = {}
