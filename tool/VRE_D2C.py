@@ -80,19 +80,6 @@ class D2C_RUNNER(Tool):
             os.chdir(execution_path)
             logger.debug("Execution path: {}".format(execution_path))
 
-            # Set file names for output files (with random name if not predefined)
-            # output_path = ''
-            # for ofile in output_files:
-            #     if ofile["file_path"] is not None:
-            #         pop_output_path = os.path.abspath(ofile["file_path"])
-            #         if output_path == '':
-            #             output_path = os.path.dirname(pop_output_path)
-            #         self.populable_outputs.append(pop_output_path)
-            #     else:
-            #         errstr = "The output_file[{}] can not be located. Please specify its expected path.".format(key)
-            #         logger.error(errstr)
-            #         raise Exception(errstr)
-
             logger.debug("Init execution of the conversion tool")
             # Prepare file paths
             subjects = {}
