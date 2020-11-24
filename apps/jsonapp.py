@@ -93,14 +93,18 @@ class JSONApp(WorkflowApp):  # pylint: disable=too-few-public-methods
             else:
                 input_metadata[role] = input_metadata_ids[input_id]
 
+        # Output folder
+        input_metadata['output_folder'] = arguments['execution']
+
         # get paths from IDs
         input_files = {}
         for role, metadata in input_metadata.items():
             if isinstance(metadata, (list, tuple)):  # check allow_multiple?
                 input_files[role] = [el.file_path for el in metadata]
-            elif role == 'bioimage':
+            elif role == 'bioimage' or role == 'zip_file':
                 input_files[role] = [metadata.file_path]
             else:
+                continue
                 input_files[role] = metadata.file_path
 
         # Run launch from the superclass

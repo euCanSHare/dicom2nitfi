@@ -95,37 +95,6 @@ def main_json(config, in_metadata, out_metadata):
         logger.info("1. Instantiate and launch the App")
         app = JSONApp()
 
-        # Generating output files paths for images
-        # with open(in_metadata, "r") as in_meta:
-        #     _in = json.load(in_meta)
-        #     conf = json.load(open(config))
-        #     conf['output_files'] = []
-        #     out_path = [c['value'] for c in conf['arguments'] if c['name'] == 'execution'][0]
-        #     for inpf in conf['input_files']:
-        #         aux = [i for i in _in if i['_id'] == inpf['value']]
-        #         if aux[0]['data_type'] != 'bioimage':
-        #             continue
-        #         filepath = aux[0]['file_path']
-        #         path = os.path.join(out_path, os.path.basename(filepath))
-        #         npath = path.rstrip('.nii.gz') + '_mask.nii.gz'
-        #         new_file = {
-        #             "name": "masks",
-        #             "required": True,
-        #             "allow_multiple": False,
-        #             "file": {
-        #                 "file_type": "NIFTI",
-        #                 "file_path": npath,
-        #                 "data_type": "image_mask",
-        #                 "meta_data": {},
-        #                 "sources": [path]
-        #             }
-        #         }
-        #         conf['output_files'].append(new_file)
-
-        # # Save the new modified JSON
-        # with open(config, 'w') as conf_file:
-        #     json.dump(conf, conf_file)
-
         result = app.launch(process_WF_RUNNER, config, in_metadata, out_metadata)  # launch the app
         logger.info("2. App successfully launched; see " + out_metadata)
         return result

@@ -33,11 +33,14 @@ from utils.post_processing import postProcess
 
 class DICOM_Dataset(object):
     """ Class for managing DICOM datasets """
-    def __init__(self, input_dir, post_process=False):
+    def __init__(self, input_dir, output_dir, post_process=False):
         """
             Initialise data
             Group series by study type or field of view.
         """
+        # Set output dir
+        self.output_dir = output_dir
+        
         # If input folder is a zip file, unzip it
         _, ext = os.path.splitext(input_dir)
         if ext == '.zip':
@@ -344,20 +347,20 @@ class DICOM_Dataset(object):
             nii = nib.Nifti1Image(volume, affine)
             nii.header['pixdim'][4] = dt
             nii.header['sform_code'] = 1
-            nib.save(nii, os.path.join(folder, '{}.nii.gz'.format(serDesc)))
+            nib.save(nii, os.path.join(self.output_dir, '{}.nii.gz'.format(serDesc)))
             aux_file = {}
-            aux_file['file_path'] = os.path.join(folder, '{}.nii.gz'.format(serDesc))
+            aux_file['file_path'] = os.path.join(self.output_dir, '{}.nii.gz'.format(serDesc))
             if self.cvi42_lb:
                 nii_lb = nib.Nifti1Image(label, affine)
                 nii_lb.header['pixdim'][4] = dt
                 nii_lb.header['sform_code'] = 1
-                nib.save(nii_lb, os.path.join(folder, '{}_label.nii.gz'.format(serDesc)))
+                nib.save(nii_lb, os.path.join(self.output_dir, '{}_label.nii.gz'.format(serDesc)))
                 nii_lb_up = nib.Nifti1Image(label_up, affine)
                 nii_lb_up.header['pixdim'][4] = dt
                 nii_lb_up.header['sform_code'] = 1
-                nib.save(nii_lb_up, os.path.join(folder, '{}_label_upsample.nii.gz'.format(serDesc)))
-                aux_file['mask_path'] = os.path.join(folder, '{}_label.nii.gz'.format(serDesc))
-                aux_file['upsample_mask_path'] = os.path.join(folder, '{}_label_upsample.nii.gz'.format(serDesc))
+                nib.save(nii_lb_up, os.path.join(self.output_dir, '{}_label_upsample.nii.gz'.format(serDesc)))
+                aux_file['mask_path'] = os.path.join(self.output_dir, '{}_label.nii.gz'.format(serDesc))
+                aux_file['upsample_mask_path'] = os.path.join(self.output_dir, '{}_label_upsample.nii.gz'.format(serDesc))
 
         # Save information of patient
         studyDate = ds.StudyDate if ds.__contains__('StudyDate') else ''

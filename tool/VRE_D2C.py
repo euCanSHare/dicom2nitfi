@@ -84,12 +84,12 @@ class D2C_RUNNER(Tool):
             # Prepare file paths
             subjects = {}
             for key in input_files.keys():
-                if key != 'bioimage':
+                if key != 'bioimage' and key != 'zip_file':
                     logger.debug('Invalid key "{}". Should be bioimage.'.format(key))
                     continue
                 for _file in input_files[key]:
                     # Convert DICOM images
-                    aux = DICOM_Dataset(_file)
+                    aux = DICOM_Dataset(_file, input_metadata['output_folder'])
                     subjects.update(aux.getNiftis())
 
             output_files = []
