@@ -22,7 +22,6 @@ import json
 import logging
 import argparse
 
-# from .eval import run
 from basic_modules.workflow import Workflow
 from utils import logger
 
