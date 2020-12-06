@@ -1,5 +1,6 @@
 data/*
 tests/run*
+*_tmp.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
