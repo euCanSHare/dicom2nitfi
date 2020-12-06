@@ -1,0 +1,48 @@
+{
+    "output_files": [
+        {
+            "name": "bioimage",
+            "file_path": "$1/tests/runTMP/RIDER_1344011628_20190220_TEST.nii.gz",
+            "data_type": "bioimage",
+            "file_type": "NIFTI",
+            "meta_data": {
+                "file_path": "$1/tests/runTMP/RIDER_1344011628_20190220_TEST.nii.gz",
+                "age": "",
+                "patientID": "RIDER-1344011628",
+                "sex": "",
+                "weight": "",
+                "size": "",
+                "vendor": "",
+                "institution": "",
+                "modality": "CT",
+                "bodyPartExamined": "CHEST",
+                "view": "",
+                "contrast": false,
+                "studyDate": "20190220"
+            },
+            "sources": []
+        },
+        {
+            "name": "bioimage",
+            "file_path": "$1/tests/runTMP/HN1331_20190402_CT.nii.gz",
+            "data_type": "bioimage",
+            "file_type": "NIFTI",
+            "meta_data": {
+                "file_path": "$1/tests/runTMP/HN1331_20190402_CT.nii.gz",
+                "age": "",
+                "patientID": "HN1331",
+                "sex": "",
+                "weight": "",
+                "size": "",
+                "vendor": "CMS, Inc.",
+                "institution": "",
+                "modality": "CT",
+                "bodyPartExamined": "",
+                "view": "2chambers",
+                "contrast": false,
+                "studyDate": "20190402"
+            },
+            "sources": []
+        }
+    ]
+}

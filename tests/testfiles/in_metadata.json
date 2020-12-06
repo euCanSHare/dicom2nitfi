@@ -1,0 +1,56 @@
+[
+    {
+        "_id": "unique_file_id_5e14abe0a37012.29503905",
+        "file_path": "$1/data/RIDER-1344011628_20190220_TEST.zip",
+        "file_type": "ZIP",
+        "data_type": "bioimage",
+        "compressed": "ZIP",
+        "user_id": "user_id",
+        "creation_time": {
+            "sec": 1578413024,
+            "usec": 0
+        },
+        "meta_data": {
+            "type": "file",
+            "size": 0,
+            "project": "my_project_id",
+            "atime": {
+                "sec": 1578413024,
+                "usec": 0
+            },
+            "parentDir": "unique_file_id_5e14abe0a37742.64003100",
+            "lastAccess": {
+                "sec": 1578413024,
+                "usec": 0
+            }
+        },
+        "sources": []
+    },
+    {
+        "_id": "unique_file_id_5e14abe0a37012.29503906",
+        "file_path": "$1/data/HN1331_20190402_CT.zip",
+        "file_type": "ZIP",
+        "data_type": "bioimage",
+        "compressed": "ZIP",
+        "user_id": "user_id",
+        "creation_time": {
+            "sec": 1578413024,
+            "usec": 0
+        },
+        "meta_data": {
+            "type": "file",
+            "size": 0,
+            "project": "my_project_id",
+            "atime": {
+                "sec": 1578413024,
+                "usec": 0
+            },
+            "parentDir": "unique_file_id_5e14abe0a37741.64003100",
+            "lastAccess": {
+                "sec": 1578413024,
+                "usec": 0
+            }
+        },
+        "sources": []
+    }
+]

@@ -1,0 +1,56 @@
+{
+    "output_files": [
+        {
+            "file": {
+                "file_type": "ZIP",
+                "file_path": "$1/data/RIDER-1344011628_20190220_TEST.zip",
+                "meta_data": {},
+                "data_type": "bioimage",
+                "compressed": "ZIP"
+            },
+            "required": true,
+            "allow_multiple": true,
+            "name": "images"
+        },
+        {
+            "file": {
+                "file_type": "ZIP",
+                "file_path": "$1/data/HN1331_20190402_CT.zip",
+                "meta_data": {},
+                "data_type": "bioimage",
+                "compressed": "ZIP"
+            },
+            "required": true,
+            "allow_multiple": true,
+            "name": "images"
+        }
+    ],
+    "input_files": [
+        {
+            "value": "unique_file_id_5e14abe0a37012.29503905",
+            "required": true,
+            "allow_multiple": true,
+            "name": "bioimage"
+        },
+        {
+            "value": "unique_file_id_5e14abe0a37012.29503906",
+            "required": true,
+            "allow_multiple": true,
+            "name": "bioimage"
+        }
+    ],
+    "arguments": [
+        {
+            "value": "$1/tests/runTMP",
+            "name": "execution"
+        },
+        {
+            "value": "my_project_id",
+            "name": "project"
+        },
+        {
+            "value": "dicom2nifti",
+            "name": "description"
+        }
+    ]
+}
