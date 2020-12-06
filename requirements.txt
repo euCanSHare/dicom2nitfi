@@ -5,3 +5,4 @@ regex
 pydicom
 nibabel
 opencv-python
+pytest
