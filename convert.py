@@ -104,8 +104,13 @@ class DICOM_Dataset(object):
                         continue
 
                     instNumber = int(ds.InstanceNumber)
+                    if ds.__contains__('SliceLocation'):
+                        slcLoc = ds.SliceLocation
+                    else: # Choose patient position coordinate
+                        slcLoc = pos[2]
+
                     try:
-                        ffile = os.path.join(new_dir, desc, 'img{0}-{1:.4f}.dcm'.format(str(instNumber).zfill(4), ds.SliceLocation))
+                        ffile = os.path.join(new_dir, desc, 'img{0}-{1:.4f}.dcm'.format(str(instNumber).zfill(4), slcLoc))
                     except AttributeError: # SliceLocation does not exist
                         print('ERROR: SliceLocation does not exist.')
                         continue
