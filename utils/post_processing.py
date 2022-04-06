@@ -13,7 +13,7 @@ def find_targeted_files(path):
     '''
     patt = ['cine_short_axis', 'cine_short_axis_6MM', 'CINE_EC*_apex', 'EC_*_FIL', 'EC_*_10slices',
             'CINE_EC_barrido', 'CINE_EC', 'cine_*_EC', 'SHORT_AXIS', 'CINE_EJE_CORTO', 
-            'FUNCION_VI', '*_#SA', '*SAX*']
+            'FUNCION_VI', '*_#SA', '*SAX*', 'sa_cine']
     filepaths = []
     for p in patt:
         filepaths.extend(list(glob.iglob(os.path.join(path, '**', p + '.nii.gz'), recursive=True)))
@@ -91,6 +91,8 @@ def postProcess(path):
                     newmk[...,i,:] = omks[i].get_fdata().squeeze()[:]
                     newmku[...,i,:] = omkus[i].get_fdata().squeeze()[:]
                 except ValueError: # Shape missmatch
+                    print('ValueError: shape missmatch during post processing'
+                          ' for files related to {}'.format(files[0]))
                     continue
 
         # Post-processed cine short axis
