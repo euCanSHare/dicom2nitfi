@@ -38,19 +38,19 @@ def getContour(contour_pickle, X, Y):
         with open(contour_pickle, 'rb') as f:
             contours = pickle.load(f)
 
-            # Labels 
+            # Labels
             # short axis
             lv_endo = 1
             lv_epi = 2
             rv_endo = 3
             papil = 4
-            enh_ref_myo = 5
-            ref_myo = 6
+            enh_ref_myo = 6
+            ref_myo = 7
             excl_enh = 10
             no_reflow = 20
             # Long axis
-            la_endo = 1
-            ra_endo = 2
+            la_endo = 4
+            ra_endo = 5
 
             # Fill the contours in order
             # RV endocardium first, then LV epicardium,
@@ -61,19 +61,44 @@ def getContour(contour_pickle, X, Y):
             # where LV epicardial contour is not a closed contour. This problem
             # can only be solved if we could have a better definition of contours.
             # Thanks for Elena Lukaschuk and Stefan Piechnik for pointing this out.
+
+            # We skip the last point in the contours from cvi, otherwise
+            # the polygon may present problems when closing. 
+            print('----------->', contours.keys())
             ordered_contours = []
             if 'sarvendocardialContour' in contours:
                 ordered_contours += [(contours['sarvendocardialContour'], rv_endo)]
+            if 'larvendocardialContour' in contours:
+                ordered_contours += [(contours['larvendocardialContour'][:-1], rv_endo)]
 
             if 'saepicardialContour' in contours:
                 ordered_contours += [(contours['saepicardialContour'], lv_epi)]
             if 'saepicardialOpenContour' in contours:
                 ordered_contours += [(contours['saepicardialOpenContour'], lv_epi)]
 
+            # Close LV epicardium in long axis by taking the closest
+            # points to the endocardium contour
+            if 'laendocardialContour' in contours:
+                aux = contours['laepicardialContour'].copy()
+                start_closest = min(contours['laendocardialContour'], key=lambda x: np.linalg.norm(x-aux[0]))
+                aux = np.concatenate(([start_closest], aux))
+                end_closest = min(contours['laendocardialContour'], key=lambda x: np.linalg.norm(x-aux[-1]))
+                aux = np.concatenate((aux, [end_closest]))
+                contours['laepicardialContour'] = aux
+
+            if 'laepicardialContour' in contours:
+                ordered_contours += [(contours['laepicardialContour'][:-1], lv_epi)]
+            if 'laepicardialOpenContour' in contours:
+                ordered_contours += [(contours['laepicardialOpenContour'], lv_epi)]
+
             if 'saendocardialContour' in contours:
                 ordered_contours += [(contours['saendocardialContour'], lv_endo)]
+            if 'laendocardialContour' in contours:
+                ordered_contours += [(contours['laendocardialContour'][:-1], lv_endo)]
             if 'saendocardialOpenContour' in contours:
                 ordered_contours += [(contours['saendocardialOpenContour'], lv_endo)]
+            if 'laendocardialOpenContour' in contours:
+                ordered_contours += [(contours['laendocardialOpenContour'][:-1], lv_endo)]
 
             if 'saEnhancementReferenceMyoContour' in contours:
                 ordered_contours += [(contours['saEnhancementReferenceMyoContour'], enh_ref_myo)]
