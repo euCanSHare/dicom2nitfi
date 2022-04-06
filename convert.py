@@ -33,7 +33,7 @@ from utils.post_processing import postProcess
 
 class DICOM_Dataset(object):
     """ Class for managing DICOM datasets """
-    def __init__(self, input_dir, output_dir, post_process=False):
+    def __init__(self, input_dir, output_dir='', post_process=False):
         """
             Initialise data
             Group series by study type or field of view.
@@ -65,6 +65,8 @@ class DICOM_Dataset(object):
             if os.path.exists(new_dir):
                 os.system('rm -rf "{}"'.format(new_dir))
             os.mkdir(new_dir)
+            # if self.output_dir == '':
+            self.output_dir = new_dir
 
             # Process and extract contours
             self.cvi42_lb = parseContours(folder, new_dir)
@@ -169,15 +171,16 @@ class DICOM_Dataset(object):
             if post_process:
                 try:
                     postProcess(new_dir)
-                except Exception:
+                except Exception as e:
+                    print('Exception during postprocessing: ', e)
                     continue
             
             # Delete origin folder
-            os.system('rm -rf {}'.format(os.path.join(input_dir, p)))
+            # os.system('rm -rf {}'.format(os.path.join(input_dir, p)))
 
         # Remove DICOM files from converted folders
-        for f in glob.iglob(os.path.join(input_dir, '*_transformed', '**', '*.dcm'), recursive=True):
-            os.remove(f)
+        # for f in glob.iglob(os.path.join(input_dir, '*_transformed', '**', '*.dcm'), recursive=True):
+        #     os.remove(f)
 
 
     def transformDicoms(self, dicom_dir, patient):
@@ -279,6 +282,7 @@ class DICOM_Dataset(object):
                     print('Debug: Problem with transposing image. Saving as it comes.')
                     volume[..., idx%Z, idx//Z] = im
                 if ds.SOPInstanceUID in avail_cont:
+                    print('-> SOP', ds.SOPInstanceUID)
                     self.cvi42_lb_used = True # Contouring found
                     lab_down, lab_up = getContour(os.path.join(contour_dir, '{}.pickle'.format(ds.SOPInstanceUID)), X, Y)
                     label[..., idx%Z, idx//Z] = lab_down
@@ -352,20 +356,21 @@ class DICOM_Dataset(object):
             nii = nib.Nifti1Image(volume, affine)
             nii.header['pixdim'][4] = dt
             nii.header['sform_code'] = 1
-            nib.save(nii, os.path.join(self.output_dir, '{}.nii.gz'.format(serDesc)))
+            nib.save(nii, os.path.join(self.output_dir, s, '{}.nii.gz'.format(serDesc)))
             aux_file = {}
-            aux_file['file_path'] = os.path.join(self.output_dir, '{}.nii.gz'.format(serDesc))
+            aux_file['file_path'] = os.path.join(self.output_dir, s, '{}.nii.gz'.format(serDesc))
+            # TODO: Save only label files for SERIES where at least one slice had a contour
             if self.cvi42_lb:
                 nii_lb = nib.Nifti1Image(label, affine)
                 nii_lb.header['pixdim'][4] = dt
                 nii_lb.header['sform_code'] = 1
-                nib.save(nii_lb, os.path.join(self.output_dir, '{}_label.nii.gz'.format(serDesc)))
+                nib.save(nii_lb, os.path.join(self.output_dir, s, '{}_label.nii.gz'.format(serDesc)))
                 nii_lb_up = nib.Nifti1Image(label_up, affine)
                 nii_lb_up.header['pixdim'][4] = dt
                 nii_lb_up.header['sform_code'] = 1
-                nib.save(nii_lb_up, os.path.join(self.output_dir, '{}_label_upsample.nii.gz'.format(serDesc)))
-                aux_file['mask_path'] = os.path.join(self.output_dir, '{}_label.nii.gz'.format(serDesc))
-                aux_file['upsample_mask_path'] = os.path.join(self.output_dir, '{}_label_upsample.nii.gz'.format(serDesc))
+                nib.save(nii_lb_up, os.path.join(self.output_dir, s, '{}_label_upsample.nii.gz'.format(serDesc)))
+                aux_file['mask_path'] = os.path.join(self.output_dir, s, '{}_label.nii.gz'.format(serDesc))
+                aux_file['upsample_mask_path'] = os.path.join(self.output_dir, s, '{}_label_upsample.nii.gz'.format(serDesc))
 
         # Save information of patient
         studyDate = ds.StudyDate if ds.__contains__('StudyDate') else ''
@@ -380,15 +385,15 @@ class DICOM_Dataset(object):
         # Image view and use of contrast
         patt = ['cine_short_axis', 'cine_short_axis_6MM', 'CINE_EC.*_apex', 'EC_.*_FIL', 'EC_.*_10slices',
                 'CINE_EC_barrido', 'CINE_EC', 'cine_.*_EC', 'SHORT_AXIS', 'CINE_EJE_CORTO', 
-                'FUNCION_VI', '.*\_\#SA', '.*SAX.*', 'viabilidad']
+                'FUNCION_VI', r'.*\_\#SA', r'.*SAX.*', 'viabilidad', 'sa_cine']
         sa = np.any([regex.search(p, serDesc) for p in patt])
         patt = ['viabilidad', '.*RTG']
         ge = np.any([regex.search(p, serDesc) for p in patt])
-        patt = ['.*2C.*', '.*2_C.*']
+        patt = ['.*2C.*', '.*2_C.*', '2c_*']
         c2 = np.any([regex.search(p, serDesc) for p in patt])
-        patt = ['.*3C.*', '.*3_C.*']
+        patt = ['.*3C.*', '.*3_C.*', '3c_*']
         c3 = np.any([regex.search(p, serDesc) for p in patt])
-        patt = ['.*4C.*', '.*4_C.*']
+        patt = ['.*4C.*', '.*4_C.*', '4c_*']
         c4 = np.any([regex.search(p, serDesc) for p in patt])
         view = ''
         contrast = False
@@ -431,7 +436,7 @@ class DICOM_Dataset(object):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Convert DICOM files to NIFTI format.')
     parser.add_argument('path', type=str, help='Directory path to dataset that must be converted.')
-    parser.add_argument('--pp', type=bool, default=False, help='Whether or not to apply post-processing to the final images.')
+    parser.add_argument('--pp', action='store_true', help='Whether or not to apply post-processing to the final images.')
     args = parser.parse_args()
 
-    DICOM_Dataset(args.path, args.pp)
+    DICOM_Dataset(args.path, post_process=args.pp)
