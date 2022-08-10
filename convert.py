@@ -20,7 +20,7 @@
           --> patientB
           --> etc.
 """
-import os, regex, sys, glob, pydicom, zipfile
+import os, regex, glob, pydicom, zipfile
 import pickle, json, shutil, argparse
 import numpy as np
 import pandas as pd
@@ -119,11 +119,16 @@ class DICOM_Dataset(object):
                         continue
                     try:
                         ds = pydicom.dcmread(os.path.join(root, _file))
+                        if type(ds) == pydicom.dicomdir.DicomDir:
+                            print('DicomDir found. We do not deal with those files yet.')
+                            continue
                     except pydicom.errors.InvalidDicomError:
                         # Handle invalid dicom files. These are found to be the empty files (0 bytes).
                         print('Found invalid dicom file {}. Skipping!'.format(os.path.join(root, _file)))
                         continue
-                    # serDesc = ds.SeriesDescription
+
+                    full_id = get_fullid(ds)
+
                     if not ds.__contains__('SeriesDescription') and not ds.__contains__('SequenceName'):
                         serDesc = ds.StudyDescription if ds.__contains__('StudyDescription') else 'unknown'
                     else:
@@ -140,8 +145,6 @@ class DICOM_Dataset(object):
                     except Exception:
                         print('ERROR: ImagePositionPatient attribute does not exist.')
                         continue
-
-                    full_id = get_fullid(ds)
 
                     instNumber = int(ds.InstanceNumber)
                     try:
@@ -192,7 +195,8 @@ class DICOM_Dataset(object):
                         # This means we found a corrected version of some series 
                         # (probably due to some artifact or bad acquisition)
                         print('Repeated series', full_id, os.path.basename(ffile))
-                        at = ds.AcquisitionTime
+                        # at = ds.AcquisitionTime
+                        at = ds.SeriesTime
                         if not self.cvi42_lb:
                             alternative_file = filedf.loc[(filedf['dst'] == ffile) & (filedf['at'] != ffile), 'src'].values[0]
                             ds2 = pydicom.dcmread(alternative_file)
