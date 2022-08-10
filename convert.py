@@ -115,7 +115,7 @@ class DICOM_Dataset(object):
             filedf = pd.DataFrame(columns=['sop','siuid','src','dst','at','copy'])
             for root, _dir, files in os.walk(folder):
                 for _file in files:
-                    if _file == 'DICOMDIR':
+                    if _file == 'DICOMDIR' or _file == 'DIRFILE':
                         continue
                     try:
                         ds = pydicom.dcmread(os.path.join(root, _file))
