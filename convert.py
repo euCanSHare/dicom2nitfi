@@ -144,10 +144,26 @@ class DICOM_Dataset(object):
                     full_id = get_fullid(ds)
 
                     instNumber = int(ds.InstanceNumber)
-                    if ds.__contains__('SliceLocation'):
-                        slcLoc = ds.SliceLocation
-                    else: # Choose patient position coordinate
-                        slcLoc = pos[2]
+                    try:
+                        if ds.__contains__('SliceLocation'):
+                            slcLoc = ds.SliceLocation
+                        else: # Choose patient position coordinate
+                            pos = np.array([float(x) for x in ds.ImagePositionPatient])
+                            pos[:2] = -pos[:2]
+                            slcLoc = pos[2]
+
+                        # When something nasty is set in these attributes
+                        if slcLoc is None:
+                            raise Exception('ImagePositionPatient is None')
+
+                    except Exception:
+                        print('ERROR: ImagePositionPatient attribute does not exist.')
+                        if instNumber < 31:
+                            slcLoc = instNumber
+                        elif instNumber < 61:
+                            slcLoc = instNumber - 30
+                        else:
+                            slcLoc = instNumber - 60
 
                     try:
                         ffile = os.path.join(new_dir, full_id, 'img{0}-{1:.4f}.dcm'.format(str(instNumber).zfill(4), slcLoc))
