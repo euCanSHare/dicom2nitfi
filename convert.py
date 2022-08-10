@@ -248,6 +248,7 @@ class DICOM_Dataset(object):
             contour_dir = os.path.join(dicom_dir, 'contours')
             avail_cont = [f.rstrip('.pickle') for f in os.listdir(contour_dir)]
         # Go through each folder and transform it to nifti files
+        aux_file = {}
         processed = []
         for s in sorted(os.listdir(dicom_dir)):
             SKIP = False
@@ -446,7 +447,6 @@ class DICOM_Dataset(object):
             nii.header['pixdim'][4] = dt
             nii.header['sform_code'] = 1
             nib.save(nii, os.path.join(self.output_dir, s, '{}.nii.gz'.format(serDesc)))
-            aux_file = {}
             aux_file['file_path'] = os.path.join(self.output_dir, s, '{}.nii.gz'.format(serDesc))
             # TODO: Save only label files for SERIES where at least one slice had a contour
             if self.cvi42_lb:
