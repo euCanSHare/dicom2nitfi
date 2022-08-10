@@ -31,6 +31,43 @@ from utils.contour import parseContours, getContour
 from utils.post_processing import postProcess
 
 
+def get_tag(ds, tag):
+    'Get tag from DICOM or return empty string'
+    if ds.__contains__(tag):
+        return ds.get(tag)
+    else:
+        return ""
+
+def get_fullid(ds):
+    'Define a full id as in ItkSnap'
+    uid = ds.SeriesInstanceUID
+    full_id = uid
+
+    # List of tags used for refined grouping of files - order matters!
+    tags_refine = []
+    tags_refine.append(get_tag(ds, 'SeriesNumber'));
+    tags_refine.append(get_tag(ds, 'SequenceName'));
+    tags_refine.append(get_tag(ds, 'SliceThickness'));
+    tags_refine.append(get_tag(ds, 'Rows'));
+    tags_refine.append(get_tag(ds, 'Columns'));
+
+    # Iterate over the tags in the refine list
+    for tag in tags_refine:
+        # Read the tag value
+        s = str(tag)
+
+        # This code is from gdcmSerieHelper
+        if (full_id == uid) & (s != ''):
+            full_id += "." # add separator
+
+        full_id += s
+
+    # Remove problematic characters
+    full_id = regex.sub(r' |-|\\|\/|\*', '_', full_id)
+
+    return full_id
+
+
 class DICOM_Dataset(object):
     """ Class for managing DICOM datasets """
     def __init__(self, input_dir, output_dir='', post_process=False):
@@ -93,7 +130,6 @@ class DICOM_Dataset(object):
                         serDesc = ds.SeriesDescription if ds.__contains__('SeriesDescription') else ds.SequenceName
                     serDesc = regex.sub( r' |-|\\|\/', '_', serDesc)
                     serDesc = regex.sub(r'\(|\)', '', serDesc)
-                    desc = ds.SeriesInstanceUID
                     if 'Workspace' in serDesc:
                         # Ignore cvi42 workspace dicom
                         # Maybe this file can be used to extract contours as well
@@ -105,6 +141,8 @@ class DICOM_Dataset(object):
                         print('ERROR: ImagePositionPatient attribute does not exist.')
                         continue
 
+                    full_id = get_fullid(ds)
+
                     instNumber = int(ds.InstanceNumber)
                     if ds.__contains__('SliceLocation'):
                         slcLoc = ds.SliceLocation
@@ -112,7 +150,7 @@ class DICOM_Dataset(object):
                         slcLoc = pos[2]
 
                     try:
-                        ffile = os.path.join(new_dir, desc, 'img{0}-{1:.4f}.dcm'.format(str(instNumber).zfill(4), slcLoc))
+                        ffile = os.path.join(new_dir, full_id, 'img{0}-{1:.4f}.dcm'.format(str(instNumber).zfill(4), slcLoc))
                     except AttributeError: # SliceLocation does not exist
                         print('ERROR: SliceLocation does not exist.')
                         continue
@@ -125,7 +163,7 @@ class DICOM_Dataset(object):
 
                     new_row = {
                         'sop': ds.SOPInstanceUID,
-                        'siuid': desc,
+                        'fullid': full_id,
                         'src': os.path.join(root, _file),
                         'dst': ffile,
                         'at': ds.AcquisitionTime if ds.__contains__('AcquisitionTime') else '',
@@ -137,7 +175,7 @@ class DICOM_Dataset(object):
                         # This particular slice was already present in filedict
                         # This means we found a corrected version of some series 
                         # (probably due to some artifact or bad acquisition)
-                        print('Repeated series', desc, os.path.basename(ffile))
+                        print('Repeated series', full_id, os.path.basename(ffile))
                         at = ds.AcquisitionTime
                         if not self.cvi42_lb:
                             alternative_file = filedf.loc[(filedf['dst'] == ffile) & (filedf['at'] != ffile), 'src'].values[0]
