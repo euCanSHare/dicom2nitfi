@@ -133,17 +133,12 @@ class DICOM_Dataset(object):
                         serDesc = ds.StudyDescription if ds.__contains__('StudyDescription') else 'unknown'
                     else:
                         serDesc = ds.SeriesDescription if ds.__contains__('SeriesDescription') else ds.SequenceName
+                    # Remove problematic characters that might break the system path
                     serDesc = regex.sub( r' |-|\\|\/', '_', serDesc)
                     serDesc = regex.sub(r'\(|\)', '', serDesc)
                     if 'Workspace' in serDesc:
                         # Ignore cvi42 workspace dicom
                         # Maybe this file can be used to extract contours as well
-                        continue
-                    try:
-                        pos = np.array([float(x) for x in ds.ImagePositionPatient])
-                        pos[:2] = -pos[:2]
-                    except Exception:
-                        print('ERROR: ImagePositionPatient attribute does not exist.')
                         continue
 
                     instNumber = int(ds.InstanceNumber)
@@ -201,7 +196,7 @@ class DICOM_Dataset(object):
                             alternative_file = filedf.loc[(filedf['dst'] == ffile) & (filedf['at'] != ffile), 'src'].values[0]
                             ds2 = pydicom.dcmread(alternative_file)
                             # Skip file if it is an old version of an existing one
-                            if float(ds.AcquisitionTime) < float(ds2.AcquisitionTime):
+                            if float(ds.SeriesTime) < float(ds2.SeriesTime):
                                 continue
                         else:
                             # When contours exist, keep images according to those files.
@@ -225,6 +220,9 @@ class DICOM_Dataset(object):
 
             self.transformDicoms(new_dir, p)
 
+            # Anonymize dicoms files
+            # anonymize_dicoms(new_dir, p)
+
             # File postprocessing
             if post_process:
                 try:
@@ -232,7 +230,18 @@ class DICOM_Dataset(object):
                 except Exception as e:
                     print('Exception during postprocessing: ', e)
                     continue
-            
+
+            # Move nifti just under new_dir
+            for niif in glob.iglob(os.path.join(new_dir, '*', '*.nii.gz')):
+                new_path = os.path.join(new_dir, os.path.basename(niif))
+                i = 0
+                while os.path.exists(new_path):
+                    i += 1
+                    # Change filepath to something like filepath(i).nii.gz
+                    new_path = regex.sub(
+                        r'[\(\d+\)]*\.nii.gz', '({}).nii.gz'.format(i), new_path)
+                shutil.copy(niif, new_path)
+
             # Delete origin folder
             # os.system('rm -rf {}'.format(os.path.join(input_dir, p)))
 
