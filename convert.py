@@ -291,7 +291,7 @@ class DICOM_Dataset(object):
             # Vertical slices (Z) and time steps (T)
             Z = len(set([float(os.path.basename(i)[8:].rstrip('.dcm')) for i in files]))
             T = 1 + (len(files)-Z) // Z
-            print('T', T, ' Z', Z)
+            print('T', T, ' Z', Z, '#files', len(files))
             # print('-> files', files)
             if T*Z < len(files):
                 print('DICOM files seem to come from different cine images or have different time steps.')
@@ -319,7 +319,10 @@ class DICOM_Dataset(object):
             if serDesc == 'MESURES': continue
             serDesc = regex.sub( r' |-|\\|\/', '_', serDesc)
             serDesc = regex.sub(r'\(|\)', '', serDesc)
-            Y, X = ds.Rows, ds.Columns
+            try:
+                Y, X = ds.Rows, ds.Columns
+            except AttributeError:
+                continue
             volume = np.zeros((X,Y,Z,T), dtype='float32')
             label  = np.zeros((X,Y,Z,T), dtype='uint8')
             label_up  = np.zeros((X*4,Y*4,Z,T), dtype='uint8')
@@ -330,6 +333,8 @@ class DICOM_Dataset(object):
                 reader.SetFileName(f)
                 try:
                     im = sitk.GetArrayFromImage(reader.Execute()).squeeze()
+                    if len(im.shape) > 2:
+                        im = im[...,0]
                 except Exception: 
                     print('ERROR: Unable to read file with SimpleITK')
                     SKIP = True # Skip series
@@ -337,8 +342,14 @@ class DICOM_Dataset(object):
                 try:
                     volume[..., idx%Z, idx//Z] = im.transpose()
                 except ValueError:
-                    print('Debug: Problem with transposing image. Saving as it comes.')
-                    volume[..., idx%Z, idx//Z] = im
+                    if volume[..., idx%Z, idx//Z].shape == im.shape:
+                        print('Debug: Problem with transposing image. Saving as it comes.')
+                        volume[..., idx%Z, idx//Z] = im
+                    else:
+                        print('Debug: Image does not seem to belong to same series.')
+                        print('Debug: shape is {}'.format(im.shape))
+                        SKIP = True # Skip series
+                        break
                 if ds.SOPInstanceUID in avail_cont:
                     print('-> SOP', ds.SOPInstanceUID)
                     self.cvi42_lb_used = True # Contouring found
@@ -350,12 +361,16 @@ class DICOM_Dataset(object):
                 if ds.__contains__('TriggerTime'):
                     t = ds.TriggerTime
                 files_time.append(t)
-            
+
             # If SimpleITK failed to read some dicom file, we skip this series
             if SKIP: continue
 
-            dx = float(ds.PixelSpacing[1])
-            dy = float(ds.PixelSpacing[0])
+            try:
+                dx = float(ds.PixelSpacing[1])
+                dy = float(ds.PixelSpacing[0])
+            except AttributeError:
+                print('AttributeError: No PixelSpacing attribute found. Setting to 1x1.')
+                dx = dy = 1
             # Temporal spacing
             dt = (files_time[Z-1] - files_time[0]) * 1e-3
 
@@ -374,19 +389,31 @@ class DICOM_Dataset(object):
 
             # The coordinate of the upper-left voxel of the first and second slices
             ds = pydicom.dcmread(file_list[0][0])
-            pos_ul = np.array([float(x) for x in ds.ImagePositionPatient])
+            try:
+                pos_ul = np.array([float(x) for x in ds.ImagePositionPatient])
+            except AttributeError:
+                print('AttributeError: No ImagePositionPatient attribute found. Setting to 1.')
+                pos_ul = np.ones(3)
             pos_ul[:2] = -pos_ul[:2]
 
             # Image orientation
-            axis_x = np.array([float(x) for x in ds.ImageOrientationPatient[:3]])
-            axis_y = np.array([float(x) for x in ds.ImageOrientationPatient[3:]])
+            try:
+                axis_x = np.array([float(x) for x in ds.ImageOrientationPatient[:3]])
+                axis_y = np.array([float(x) for x in ds.ImageOrientationPatient[3:]])
+            except AttributeError:
+                print('AttributeError: No ImageOrientationPatient attribute found. Setting to 1.')
+                axis_x = axis_y = np.ones(3)
             axis_x[:2] = -axis_x[:2]
             axis_y[:2] = -axis_y[:2]
 
             if Z >= 2:
                 # Read a dicom file at the second slice
                 d2 = pydicom.dcmread(file_list[1][0])
-                pos_ul2 = np.array([float(x) for x in d2.ImagePositionPatient])
+                try:
+                    pos_ul2 = np.array([float(x) for x in d2.ImagePositionPatient])
+                except AttributeError:
+                    print('AttributeError: No ImagePositionPatient attribute found. Setting to 1.')
+                    pos_ul2 = np.ones(3) + 1
                 pos_ul2[:2] = -pos_ul2[:2]
                 axis_z = pos_ul2 - pos_ul
                 axis_z = axis_z / np.linalg.norm(axis_z)
@@ -403,7 +430,11 @@ class DICOM_Dataset(object):
             else:
                 print('Debug: can not find attribute SpacingBetweenSlices. '
                       'Use attribute SliceThickness instead.')
-                dz = float(ds.SliceThickness)
+                if ds.__contains__('SliceThickness'):
+                    dz = float(ds.SliceThickness)
+                else:
+                    print('AttributeError: No SliceThickness attribute found. Skipping image...')
+                    continue
 
             # Affine matrix which converts the voxel coordinate to world coordinate
             affine = np.eye(4)
