@@ -3,6 +3,7 @@ import glob
 import zlib
 import regex
 import pickle
+import pydicom
 import argparse
 import numpy as np
 from xml.dom import minidom
@@ -73,6 +74,80 @@ def parseXmlFile(xml_name, output_dir):
             pickle.dump(contours, f)
 
 
+def findContours2(str_file):
+    """
+    Find key dividing contours on hex file.
+    Contour points are preceded by keywords
+    such as Contour or Contour00X.
+    """
+    imsz = b'\x00I\x00m\x00a\x00g\x00e\x00S\x00i\x00z\x00e'
+    p = str_file.find(imsz)
+    image_size = str_file[p+len(imsz)+2:p+len(imsz)+4]
+    image_size = int.from_bytes(image_size, byteorder='big')
+    print('> Image size', image_size)
+    # The key to look for is an uid of the form 1.5.12.145...
+    # We iterate over all uids and look for contours within two uids.
+    uid_pattern = regex.compile(rb'(?<=\x00{2}\x00[a-zA-Z\`\&\,])((\x00\d)+\x00\.)+(\x00\d)+(?=\x00{3})')
+    uid_contours = {}
+    # Start of slice information: uid
+    sr = uid_pattern.search(str_file)
+    if sr is None: return False
+    pos0 = sr.end() + 1
+
+    while True:
+        # Next slice. Look for uid.
+        uid = sr.group().replace(b'\x00', b'').decode('utf-8')
+        print('-> New uid ->', uid)
+        sr = uid_pattern.search(str_file[pos0+1:])
+        if sr is None: break # No match found
+        pos1 = pos0 + sr.start()
+
+        # Look for contour names (e.g. saendocardialContour)
+        cnts = regex.finditer(rb'(\x00[a-zA-Z])+(\x00\d)*', str_file[pos0:pos1])
+        for cnt in cnts:
+            contour_name = cnt.group().replace(b'\x00', b'').decode('utf-8')
+            if 'Contour' not in contour_name:
+                # Skip when contour_name is for example RefPoint
+                continue
+            _pos = pos0 + cnt.end()
+
+            # Start of contour points (FREE could be another
+            # keyword for automatic contours, such as FREE_LA or FREE_OPEN).
+            # In general, we match "FREE*", where * is some other letter followed
+            # by a \x00 character. Otherwise, the .end() position will be altered.
+            # Open question: are there any other keyword that we must consider?
+            sr_ct = regex.search(rb'FREE\w*(?=\x00)', str_file[_pos:_pos+50])
+            if sr_ct is None: # When LINE is found, we skip it
+                continue
+            dif = sr_ct.end()
+            # Number of points that make the contour
+            num = int.from_bytes(str_file[_pos+dif+7:_pos+dif+9], byteorder='big')
+            print('> Position', pos0, pos1)
+            print('\t Num. points =', num, contour_name)
+            init = _pos+dif+9
+            points = []
+            for _ in range(num):
+                x = int.from_bytes(str_file[init+2:init+4], byteorder='big')
+                init += 4
+                y = int.from_bytes(str_file[init+2:init+4], byteorder='big')
+                init += 4
+                points.append((x,y))
+
+            # SubpixelResolution is usually 4, but sometimes it can be 2.
+            # Should find a way to detect this.
+            sub = 4
+            points = np.array(points, dtype=np.float32)
+            points /= sub
+            if uid not in uid_contours.keys():
+                uid_contours[uid] = {}
+            uid_contours[uid][contour_name] = points
+
+        # Go to next uid
+        pos0 = pos1
+
+    return uid_contours
+
+
 def findContours(str_file):
     """
     Find C.o.n.t.o.u.r. key on hex file.
@@ -94,6 +169,7 @@ def findContours(str_file):
     # e.g. RV may have two contact points with MYO
     pos = 0
     f = 0
+    # Warning! It is removing too many points before RefPoint string.
     while True:
         f = str_file[pos+1:].find(b'R\x00e\x00f\x00P\x00o\x00i\x00n\x00t\x00')
         if f < 0: break
@@ -141,9 +217,12 @@ def findContours(str_file):
         if sr is None: # When LINE is found, we skip it
             continue
         dif = sr.end()
-        # Number of points in contour
-        num = int.from_bytes(str_file[pos+dif+7:pos+dif+9], byteorder='big')
-        # Save points to array staring from init.
+        # Number of points in contour.
+        # Open question: there is an additional number before this one, at position
+        # pos+dif+3:pos+dif+7, with an unknown meaning to us so far. Is it relevant?
+        num_points_byte_str = str_file[pos+dif+7:pos+dif+9]
+        num = int.from_bytes(num_points_byte_str, byteorder='big')
+        # Save points to an array staring from init = pos+dif+9.
         init = pos+dif+9
         points = []
         for i in range(num):
@@ -176,7 +255,8 @@ def parseHexFile(filepath, output_dir):
     f.close()
 
     # Parse file in here
-    uid_contours = findContours(str_object2)
+    # uid_contours = findContours(str_object2)
+    uid_contours = findContours2(str_object2)
 
     # Save the contours for each dicom file
     cont_dir = os.path.join(output_dir, 'contours')
@@ -185,6 +265,29 @@ def parseHexFile(filepath, output_dir):
         with open(os.path.join(cont_dir, '{0}.pickle'.format(uid)), 'wb') as f:
             pickle.dump(contours, f)
 
+
+def parseDicomFile(filepath, output_dir):
+    """Parse a cvi42 dicom file"""
+    # Uncompressed file in Zlib format
+    dcm = pydicom.dcmread(filepath)
+    # Key 37 is the (0025, 1030) Private tag data
+    # OB: Array of 100914 elements
+    str_object2 = zlib.decompress(dcm[list(dcm.keys())[37]].value)
+    decomp_name = filepath[:-8] + '.decoded'
+    f = open(decomp_name, 'wb')
+    f.write(str_object2)
+    f.close()
+
+    # Parse file in here
+    # uid_contours = findContours(str_object2)
+    uid_contours = findContours2(str_object2)
+
+    # Save the contours for each dicom file
+    cont_dir = os.path.join(output_dir, 'contours')
+    os.mkdir(cont_dir)
+    for uid, contours in uid_contours.items():
+        with open(os.path.join(cont_dir, '{0}.pickle'.format(uid)), 'wb') as f:
+            pickle.dump(contours, f)
 
 
 def parse(filepath, output_dir):
@@ -203,6 +306,8 @@ def parse(filepath, output_dir):
         parseHexFile(filepath, output_dir)
     elif ext == '.cvi42wsx': # Workspace in xml format
         parseXmlFile(filepath, output_dir)
+    elif ext == '.dcm':
+        parseDicomFile(filepath, output_dir)
     else:
         print('ERROR: Contour format "{}" from file "{}" not understood!'.format(
             ext, filepath
