@@ -90,6 +90,7 @@ class DICOM_Dataset(object):
         self.patient_dict = {}
         patients = os.listdir(input_dir)
         for p in sorted(patients):
+            # if p != 'S12600': continue
             if '_transformed' in p:
                 continue
             folder = os.path.join(input_dir, p)
@@ -115,6 +116,7 @@ class DICOM_Dataset(object):
             filedf = pd.DataFrame(columns=['sop','siuid','src','dst','at','copy'])
             for root, _dir, files in os.walk(folder):
                 for _file in files:
+                    # print('> file', os.path.join(root, _file))
                     if _file == 'DICOMDIR' or _file == 'DIRFILE':
                         continue
                     try:
@@ -452,7 +454,11 @@ class DICOM_Dataset(object):
             affine[:3,1] = axis_y * dy
             affine[:3,2] = axis_z * dz
             affine[:3,3] = pos_ul
-            nii = nib.Nifti1Image(volume, affine)
+            try:
+                nii = nib.Nifti1Image(volume, affine)
+            except Exception:
+                print('Error! Failed to create nifti file. Skipping image...')
+                continue
             nii.header['pixdim'][4] = dt
             nii.header['sform_code'] = 1
             nib.save(nii, os.path.join(self.output_dir, s, '{}.nii.gz'.format(serDesc)))
