@@ -2,10 +2,14 @@ import os
 import cv2
 import glob
 import pickle
+import argparse
 
 import numpy as np
 
-from utils.parse_cvi42 import parse as parse_cvi
+try:
+    from utils.parse_cvi42 import parse as parse_cvi
+except Exception:
+    from parse_cvi42 import parse as parse_cvi
 
 
 def parseContours(patient_dir, new_dir):
@@ -131,7 +135,9 @@ def getContour(contour_pickle, X, Y):
             # space and then downsample the label map than fill on the original image.
             lab_up = np.zeros((Y * up, X * up))
             for c, l in ordered_contours:
-                coord = np.round(c * up).astype(np.int)
+                coord = np.round(c * up).astype(np.int32)
+                # print('> coords', c[:10])
+                # print('> coords', c[-10:])
                 # Remove outlier points in contours. 
                 # For some unknown reason, some outlier points appear.
                 # b = np.linalg.norm(coord - np.mean(coord, axis=0), axis=1)
@@ -139,3 +145,27 @@ def getContour(contour_pickle, X, Y):
                 cv2.fillPoly(lab_up, [coord], l)
 
             return lab_up[::up, ::up].transpose(), lab_up.transpose()
+
+
+def convert_contours(directory, output_dir):
+    'Conver pickle files with countor coordinates to numpy arrays.'
+    pickles = sorted(glob.iglob(os.path.join(directory, '*.pickle')))
+    for f in pickles:
+        print('> Parsing file', f)
+        od = os.path.join(output_dir, os.path.basename(f)[:-7])
+        os.makedirs(od, exist_ok=True)
+        cnt, cnt_up = getContour(f, 256, 256)
+        np.save(os.path.join(od, os.path.basename(f)[:-7]+'.npy'), cnt)
+        np.save(os.path.join(od, os.path.basename(f)[:-7]+'_up.npy'), cnt_up)
+        # break
+
+
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Convert DICOM files to NIFTI format.')
+    parser.add_argument('directory', type=str, help='Directory path to contour file to be pased.')
+    parser.add_argument('output', type=str, help='Path to output directory.')
+    args = parser.parse_args()
+
+    convert_contours(args.directory, args.output)
