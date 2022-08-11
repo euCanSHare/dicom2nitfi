@@ -1,7 +1,9 @@
 import os
+import glob
 import zlib
 import regex
 import pickle
+import argparse
 import numpy as np
 from xml.dom import minidom
 
@@ -78,6 +80,12 @@ def findContours(str_file):
     such as Contour or Contour00X.
     """
     # Byte string to look for in corpus
+    # print(str_file[:200])
+    imsz = b'\x00I\x00m\x00a\x00g\x00e\x00S\x00i\x00z\x00e'
+    p = str_file.find(imsz)
+    image_size = str_file[p+len(imsz)+2:p+len(imsz)+4]
+    image_size = int.from_bytes(image_size, byteorder='big')
+    print('> Image size', image_size)
     a = b'Contour'
     b = list(zip([a[i:i+1] for i in range(len(a))], [b'\x00']*len(a)))
     cntr = b''.join([i for j in b for i in j])
@@ -105,9 +113,10 @@ def findContours(str_file):
         # Skip lines that contain the word "Contours".
         # These tags do not contain points.
         if b'Contours' in str_file[pos:pos+21].replace(b'\x00', b''): continue
-        # Find contour name, i.e. alphabetic characters after Contour keyword.
-        sr = regex.search(rb'[a-zA-Z\d]+$', str_file[pos-100:pos].replace(b'\x00', b''))
-        contour = sr.group().decode('utf-8') + 'Contour'
+        # Find contour name, i.e. alphabetic characters before Contour[DDDD] keyword.
+        # * For papillary musles, the name is sapapilMuscContour0012, for example.
+        sr = regex.search(rb'[a-zA-Z\d]+Contour\d*', str_file[pos-100:pos+21].replace(b'\x00', b''))
+        contour = sr.group().decode('utf-8')
         # Find uid. A sequence of numbers and dots of the form 1.5.12.145...
         sr = regex.search(rb'(?<=\x00{2}\x00.)((\x00\d)+\x00\.)+(\x00\d)+(?=\x00{3})', str_file[pos-300:pos])
         if sr is not None:
@@ -123,8 +132,12 @@ def findContours(str_file):
                     print('Warning! No uid found for contour with name "{}" at position {}'.format(
                         contour, pos))
                     continue
-        # Start of contour points (FREE could be another keyword for automatic contours)
-        sr = regex.search(rb'FREE', str_file[pos:pos+50])
+        # Start of contour points (FREE could be another
+        # keyword for automatic contours, such as FREE_LA or FREE_OPEN).
+        # In general, we match "FREE*", where * is some other letter followed
+        # by a \x00 character. Otherwise, the .end() position will be altered.
+        # Open question: are there any other keyword that we must consider?
+        sr = regex.search(rb'FREE\w*(?=\x00)', str_file[pos:pos+50])
         if sr is None: # When LINE is found, we skip it
             continue
         dif = sr.end()
@@ -143,7 +156,7 @@ def findContours(str_file):
         # SubpixelResolution is usually 4, but sometimes it can be 2.
         # Should find a way to detect this.
         sub = 4
-        points = np.array(points, dtype=np.float)
+        points = np.array(points, dtype=np.float64)
         points /= sub
         if uid not in uid_contours.keys():
             uid_contours[uid] = {}
@@ -167,7 +180,7 @@ def parseHexFile(filepath, output_dir):
 
     # Save the contours for each dicom file
     cont_dir = os.path.join(output_dir, 'contours')
-    os.mkdir(cont_dir)
+    os.makedirs(cont_dir, exist_ok=True)
     for uid, contours in uid_contours.items():
         with open(os.path.join(cont_dir, '{0}.pickle'.format(uid)), 'wb') as f:
             pickle.dump(contours, f)
@@ -194,3 +207,23 @@ def parse(filepath, output_dir):
         print('ERROR: Contour format "{}" from file "{}" not understood!'.format(
             ext, filepath
         ))
+
+
+def parse_files(directory, output_dir):
+    'Parse cvi42 files and save 2D contours in pickle files.'
+    cvi42files = sorted(glob.iglob(os.path.join(directory, '*.cvi42ws*')))
+    for f in cvi42files:
+        print('> Parsing file', f)
+        od = os.path.join(output_dir, os.path.basename(f).split('.')[0])
+        os.makedirs(od, exist_ok=True)
+        parse(f, od)
+        break
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description='Convert DICOM files to NIFTI format.')
+    parser.add_argument('directory', type=str, help='Directory path to contour file to be pased.')
+    parser.add_argument('output', type=str, help='Path to output directory.')
+    args = parser.parse_args()
+
+    parse_files(args.directory, args.output)
