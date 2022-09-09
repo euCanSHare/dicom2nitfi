@@ -21,7 +21,7 @@
           --> etc.
 """
 import os, regex, glob, pydicom, zipfile
-import pickle, json, shutil, argparse
+import shutil, argparse
 import numpy as np
 import pandas as pd
 import nibabel as nib
@@ -45,11 +45,11 @@ def get_fullid(ds):
 
     # List of tags used for refined grouping of files - order matters!
     tags_refine = []
-    tags_refine.append(get_tag(ds, 'SeriesNumber'));
-    tags_refine.append(get_tag(ds, 'SequenceName'));
-    tags_refine.append(get_tag(ds, 'SliceThickness'));
-    tags_refine.append(get_tag(ds, 'Rows'));
-    tags_refine.append(get_tag(ds, 'Columns'));
+    tags_refine.append(get_tag(ds, 'SeriesNumber'))
+    tags_refine.append(get_tag(ds, 'SequenceName'))
+    tags_refine.append(get_tag(ds, 'SliceThickness'))
+    tags_refine.append(get_tag(ds, 'Rows'))
+    tags_refine.append(get_tag(ds, 'Columns'))
 
     # Iterate over the tags in the refine list
     for tag in tags_refine:
@@ -68,6 +68,9 @@ def get_fullid(ds):
     return full_id
 
 
+EXCLUDE_PREFIXES = ['$RECYCLE.BIN']
+
+
 class DICOM_Dataset(object):
     """ Class for managing DICOM datasets """
     def __init__(self, input_dir, output_dir='', post_process=False):
@@ -77,7 +80,7 @@ class DICOM_Dataset(object):
         """
         # Set output dir
         self.output_dir = output_dir
-        
+
         # If input folder is a zip file, unzip it
         _, ext = os.path.splitext(input_dir)
         if ext == '.zip':
@@ -86,12 +89,17 @@ class DICOM_Dataset(object):
             zip_ref.close()
             input_dir = os.path.dirname(input_dir)
 
+        # Set output dir for transformed folders
+        if output_dir == '':
+            output_dir = input_dir
+
         # Find patients and look for subdirs for each of them
         self.patient_dict = {}
         patients = os.listdir(input_dir)
         for p in sorted(patients):
-            # if p != 'S12600': continue
             if '_transformed' in p:
+                continue
+            if p in EXCLUDE_PREFIXES:
                 continue
             folder = os.path.join(input_dir, p)
             if not os.path.isdir(folder):
@@ -99,7 +107,7 @@ class DICOM_Dataset(object):
             print('Patient found', p)
             self.patient_dict[p] = []
 
-            new_dir = os.path.join(input_dir, p + '_transformed')
+            new_dir = os.path.join(output_dir, p + '_transformed')
             if os.path.exists(new_dir):
                 os.system('rm -rf "{}"'.format(new_dir))
             os.mkdir(new_dir)
@@ -247,9 +255,14 @@ class DICOM_Dataset(object):
             # Delete origin folder
             # os.system('rm -rf {}'.format(os.path.join(input_dir, p)))
 
-        # Remove DICOM files from converted folders
-        # for f in glob.iglob(os.path.join(input_dir, '*_transformed', '**', '*.dcm'), recursive=True):
-        #     os.remove(f)
+            # Remove DICOM folders from converted directories
+            for root, _dirs, files in os.walk(new_dir):
+                for _d in _dirs:
+                    shutil.rmtree(os.path.join(new_dir, _d))
+
+            # Remove DICOM files from converted folders
+            # for f in glob.iglob(os.path.join(self.output_dir, '*_transformed', '**', '*.dcm'), recursive=True):
+            #     os.remove(f)
 
 
     def transformDicoms(self, dicom_dir, patient):
@@ -541,6 +554,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Convert DICOM files to NIFTI format.')
     parser.add_argument('path', type=str, help='Directory path to dataset that must be converted.')
     parser.add_argument('--pp', action='store_true', help='Whether or not to apply post-processing to the final images.')
+    parser.add_argument('--outd', type=str, default='', help='Output directory.')
     args = parser.parse_args()
 
-    DICOM_Dataset(args.path, post_process=args.pp)
+    DICOM_Dataset(args.path, post_process=args.pp, output_dir=args.outd)
