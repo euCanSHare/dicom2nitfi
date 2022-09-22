@@ -13,7 +13,8 @@ def find_targeted_files(path):
     '''
     patt = ['cine_short_axis', 'cine_short_axis_6MM', 'CINE_EC*_apex', 'EC_*_FIL', 'EC_*_10slices',
             'CINE_EC_barrido', 'CINE_EC', 'cine_*_EC', 'SHORT_AXIS', '*CINE_EJE_CORTO', 
-            'FUNCION_VI', '*_#SA', '*SAX*', 'sa_cine', 'sa_*']
+            'FUNCION_VI', '*_#SA', '*SAX*', 'sa_cine', 'sa_*', '*TFE_BH*', '*eje_corto*',
+            '*retro_cine*']
     # Remove suffices containing slice number that will affect the next steps
     # in filenames as in sa_cine(1).nii.gz or sa_cine_slc1.nii.gz, for example
     slc_patt = r'(SLC\d+)|(slc\d+)|(\(\d+\))'
